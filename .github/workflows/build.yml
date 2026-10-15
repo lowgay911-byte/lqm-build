@@ -20,8 +20,32 @@ jobs:
           echo "ANDROID_NDK_HOME=$PWD/android-ndk-r26d" >> $GITHUB_ENV
           echo "$PWD/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
-      - name: Show files
-        run: ls -la
+      - name: Clone Dobby
+        run: git clone --depth 1 https://github.com/jmpews/Dobby.git dobby_src
+
+      - name: Build Dobby for arm64 with -fPIC
+        run: |
+          cd dobby_src
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Android \
+            -DCMAKE_SYSTEM_VERSION=28 \
+            -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_ANDROID_NDK=$ANDROID_NDK_HOME \
+            -DCMAKE_C_COMPILER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang \
+            -DCMAKE_CXX_COMPILER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ \
+            -DCMAKE_C_FLAGS="-fPIC -fvisibility=default" \
+            -DCMAKE_CXX_FLAGS="-fPIC -fvisibility=default" \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          make -j4
+          find . -name "libdobby.a"
+
+      - name: Copy libdobby.a
+        run: |
+          cp $(find dobby_src -name "libdobby.a" | head -1) ./libdobby.a
+          ls -la libdobby.a
 
       - name: Compile liblqm_menu.so
         run: |
